@@ -1,0 +1,8 @@
+name: sam3
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - numpy
+  - gradio
+prefix: /Users/grantluo/miniconda3/envs/sam3
