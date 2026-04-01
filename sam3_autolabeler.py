@@ -10,20 +10,21 @@ class SAM3Autolabeler:
 
     def load_video(self, video_path: str) -> None:
         """Start an inference session on a video. Close any existing session first."""
-        if self._session_id is not None:
-            self._predictor.handle_request(
+        with torch.autocast("cuda", dtype=torch.bfloat16):
+            if self._session_id is not None:
+                self._predictor.handle_request(
+                    request=dict(
+                        type="close_session",
+                        session_id=self._session_id,
+                    )
+                )
+            response = self._predictor.handle_request(
                 request=dict(
-                    type="close_session",
-                    session_id=self._session_id,
+                    type="start_session",
+                    resource_path=video_path,
                 )
             )
-        response = self._predictor.handle_request(
-            request=dict(
-                type="start_session",
-                resource_path=video_path,
-            )
-        )
-        self._session_id = response["session_id"]
+            self._session_id = response["session_id"]
 
     def segment(self, text_prompt: str) -> dict[int, np.ndarray]:
         """Reset session, if applicable, apply text prompt on frame 0, and propogate through video.
@@ -31,33 +32,34 @@ class SAM3Autolabeler:
         if self._session_id is None:
             raise RuntimeError("No video loaded. Call load_video() first.")
 
-        self._predictor.handle_request(
-            request=dict(
-                type="reset_session",
-                session_id=self._session_id,
+        with torch.autocast("cuda", dtype=torch.bfloat16):
+            self._predictor.handle_request(
+                request=dict(
+                    type="reset_session",
+                    session_id=self._session_id,
+                )
             )
-        )
 
-        frame_idx = 0
-        self._predictor.handle_request(
-            request=dict(
-                type="add_prompt",
-                session_id=self._session_id,
-                frame_index=frame_idx,
-                text=text_prompt,
+            frame_idx = 0
+            self._predictor.handle_request(
+                request=dict(
+                    type="add_prompt",
+                    session_id=self._session_id,
+                    frame_index=frame_idx,
+                    text=text_prompt,
+                )
             )
-        )
 
-        outputs_per_frame = {}
-        for response in self._predictor.handle_stream_request(
-            request=dict(
-                type="propagate_in_video",
-                session_id=self._session_id,
-            )
-        ):
-            outputs_per_frame[response["frame_index"]] = response["outputs"]
+            outputs_per_frame = {}
+            for response in self._predictor.handle_stream_request(
+                request=dict(
+                    type="propagate_in_video",
+                    session_id=self._session_id,
+                )
+            ):
+                outputs_per_frame[response["frame_index"]] = response["outputs"]
 
-        return outputs_per_frame
+            return outputs_per_frame
 
     def close(self) -> None:
         """Close the current session and shutdown the predictor"""

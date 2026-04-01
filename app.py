@@ -24,7 +24,7 @@ def run_video_segmentation(video_path: str, text_prompt: str):
     predictor.load_video(video_path=video_path)
     outputs_per_frame = predictor.segment(text_prompt=text_prompt)
     output_video_path = tempfile.mktemp(suffix=".mp4")
-    save_masklet_video(video_frames_for_vis, outputs_per_frame, output_video_path)
+    save_masklet_video(video_frames_for_vis, outputs_per_frame, output_video_path, fps=cap.get(cv2.CAP_PROP_FPS))
 
     return output_video_path
 
