@@ -5,7 +5,7 @@ from sam3.model_builder import build_sam3_video_predictor
 class SAM3Autolabeler:
     def __init__(self) -> None:
         """Build the SAM3 video predictor"""
-        self._predictor = build_sam3_video_predictor(gpus_to_use=range(torch.cuda.device_count()))
+        self._predictor = build_sam3_video_predictor(version="sam3.1")
         self._session_id = None
 
     def load_video(self, video_path: str) -> None:
